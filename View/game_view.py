@@ -69,13 +69,27 @@ class GameView:
         self.__update_screen()
 
     def __draw_existing_circles(self):
+        i = 0
+        circles_to_remove = []
         for circle in self.__existing_circles:
-            print(circle.colour)
+            #print(circle.colour)
             pygame.draw.circle(self.__screen, circle.colour, (self.label_to_position(circle.x),
                                                                     circle.y * self.__screen.get_height()),
                                self.__circle_width)
-            if circle.in_target_region:
+            if circle.in_target_region and not circle.predicted:
                 self.__encircle(circle)
+
+            if circle.predicted:
+                if circle.redundant > 20:
+                    circles_to_remove.append(i)
+                else:
+                    circle.redundant += 1
+            i+=1
+        for index in reversed(circles_to_remove):
+            self.__existing_circles.pop(index)
+            self.__last_label -=1
+            if len(self.__existing_circles)  == 0:
+                self.__last_label = None
 
     def __recompute(self):
         self.left = self.__screen.get_width() * 0.33 * 0.5
@@ -86,9 +100,9 @@ class GameView:
 
         self.__circle_width = self.__screen.get_width() * 0.33 * 0.1
 
-
     def __update_screen(self):
         self.__recompute()
+
         self.__screen.fill((211, 211, 211))
         self.__draw_lines()
         self.__draw_target_box()
@@ -189,6 +203,10 @@ class GameView:
 
             pred = self.__event_queue.get()
             circle = self.__existing_circles[0]
+            for i in self.__existing_circles:
+                circle = i
+                if not circle.predicted:
+                    break
 
             if pred == circle.x:
                 circle.set_colour((0,255, 0))
@@ -197,6 +215,7 @@ class GameView:
 
             else:
                 circle.set_colour((255, 0, 0))
+                circle.x = pred
 
                 circle.predicted = True
 
@@ -237,14 +256,11 @@ class GameView:
 
             circle.in_target_region  = self.__target_box.collidepoint(circle_x, circle_y)
 
-
-
     def put_label(self, label):
         self.__queue.put(label)
 
     def put_predictions(self, prediction):
         self.__event_queue.put(prediction)
-
 
     def get_out_event(self):
         if self.__out_queue.empty():

@@ -2,7 +2,7 @@
 
 class Circle:
 
-    redundant = False
+    redundant = 0
     predicted = False
     alpha = 0.5
 
