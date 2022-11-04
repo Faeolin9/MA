@@ -1,7 +1,8 @@
 from View.game_view import GameView
 from multiprocessing import Queue, Process
 import random
-import  time
+import time
+
 def great_function(la_q, ev_q, pred_q):
     gv = GameView(la_q, ev_q, pred_q)
     gv.main_loop()
@@ -30,5 +31,5 @@ if __name__ == "__main__":
         delta = time.time() - t
         if delta > 0.5:
             ch = random.choice(c_arr)
-            print("Put ", ch)
+            #print("Put ", ch)
             laq.put(ch)
