@@ -13,7 +13,7 @@ class GameView:
     __target_box = None
     __last_frame_update = __last_tick_update
 
-    def __init__(self, label_queue : Queue, out_pueue : Queue, pred_queue : Queue,
+    def __init__(self, label_queue : Queue, out_pueue : Queue, pred_queue : Queue, labels: dict,
                  box_size: float= 0.85, speed: float = 0.1, mimimum_distance_between: float = 0.33,
                  fps: int = 60, tps: int = 60):
 
@@ -21,6 +21,7 @@ class GameView:
         :param label_queue: A queue in which the next label to display is handed to the view
         :param out_pueue: A queue to give timestamps at which the prediction actually happend for what label
         :param pred_queue: A queue to feed the view the classifier's predictions
+        :param labels: A dict of form (label_name, label_value), as (key, value)
         :param box_size: At what point of the image the target box is supposed to appear
         :param speed: How fast (window_size per second) the target values are supposed to appear
         :param mimimum_distance_between: The minimum distance to insert the next target value, must be between 0 and 1
@@ -44,8 +45,11 @@ class GameView:
         self.__out_queue = out_pueue
         self.__event_queue = pred_queue
 
+        self.__label_dict = labels
+
         self.__FPS = fps
         self.__TPS = tps
+
 
         # initialize the pygame module
         pygame.init()
@@ -53,6 +57,7 @@ class GameView:
         logo = pygame.image.load("C:\\Users\\johan\\PycharmProjects\\MA\\View\\maffay.png")
         pygame.display.set_icon(logo)
         pygame.display.set_caption("EEG Hero")
+        self.label_font = pygame.font.SysFont(None, 42)
 
         # create a surface on screen that has the size of 240 x 180
         self.__screen = pygame.display.set_mode((1200, 900))
@@ -66,6 +71,7 @@ class GameView:
         self.__circle_width = self.__screen.get_width() * 0.33 * 0.1
 
         self.box_size = box_size
+        self.__upper_box =  - self.__screen.get_height()*0.05
         self.__update_screen()
 
     def __draw_existing_circles(self):
@@ -99,7 +105,6 @@ class GameView:
         self.right = (self.__screen.get_width() * 0.67 )  +self.__screen.get_width() * 0.33 * 0.5
 
         self.__circle_width = self.__screen.get_width() * 0.33 * 0.1
-
     def __update_screen(self):
         self.__recompute()
 
@@ -111,7 +116,7 @@ class GameView:
         pygame.display.flip()
 
     def label_to_position(self, label):
-        #TODO Solve this using passable dict
+        #TODO Solve this using label dict
         if label == 0:
             return self.center
         elif label == 1:
@@ -239,22 +244,44 @@ class GameView:
     def __draw_lines(self):
 
         pygame.draw.line(self.__screen, (0,0,0), (0.33 * self.__screen.get_width(),0),
-                         (0.33* self.__screen.get_width(),self.box_size *self.__screen.get_height()))
+                         (0.33* self.__screen.get_width(),self.box_size *self.__screen.get_height() + self.__upper_box))
         pygame.draw.line(self.__screen, (0, 0, 0), (0.67 * self.__screen.get_width(), 0),
-                         (0.67 * self.__screen.get_width(), self.box_size * self.__screen.get_height()))
+                         (0.67 * self.__screen.get_width(), self.box_size * self.__screen.get_height() + self.__upper_box))
+        pygame.draw.line(self.__screen, (0, 0, 0), (0.33 * self.__screen.get_width(), self.__screen.get_height() + self.__upper_box),
+                         (0.33 * self.__screen.get_width(),
+                           self.__screen.get_height()))
+        pygame.draw.line(self.__screen, (0, 0, 0), (0.67 * self.__screen.get_width(), self.__screen.get_height() + self.__upper_box),
+                         (0.67 * self.__screen.get_width(),
+                          self.__screen.get_height()))
+
+    def __print_points_and_labels(self, verbose=True):
+
+        sysfont = pygame.font.get_default_font()
+
+        label_y_pos = 0.05 *self.__screen.get_height()
+        for key in self.__label_dict.keys():
+
+            x_pos = self.label_to_position(key)
+            img = self.__
+
+
+
 
     def __draw_target_box(self):
-        self.__target_box = pygame.Rect(0, self.__screen.get_height()* self.box_size,
-                                        self.__screen.get_width(), self.__screen.get_height() * (1-self.box_size))
+        self.__target_box = pygame.Rect(0 , self.__screen.get_height()* self.box_size + self.__upper_box,
+                                        self.__screen.get_width(), self.__screen.get_height() * (1-self.box_size)
+                                        )
         pygame.draw.rect(self.__screen, (0,0,0), self.__target_box,
                          width=3)
 
     def __check_circle_collision(self):
-        for circle in self.__existing_circles:
-            circle_x = self.label_to_position(circle.x)
-            circle_y = (circle.y) * self.__screen.get_height()
 
-            circle.in_target_region  = self.__target_box.collidepoint(circle_x, circle_y)
+        for circle in self.__existing_circles:
+
+            circle_x = self.label_to_position(circle.x)
+            circle_y = circle.y * self.__screen.get_height()
+
+            circle.in_target_region = self.__target_box.collidepoint(circle_x, circle_y)
 
     def put_label(self, label):
         self.__queue.put(label)
@@ -275,7 +302,7 @@ if __name__ == "__main__":
     laq = Queue()
     evq = Queue()
     pred_q = Queue()
-    gv = GameView(laq, evq, pred_q)
+    gv = GameView(laq, evq, pred_q, {})
     gv.put_label(0)
     gv.put_label(1)
     #p = Process(target=gv.main_loop)

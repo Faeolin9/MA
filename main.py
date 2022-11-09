@@ -4,7 +4,7 @@ import random
 import time
 
 def great_function(la_q, ev_q, pred_q):
-    gv = GameView(la_q, ev_q, pred_q)
+    gv = GameView(la_q, ev_q, pred_q, {})
     gv.main_loop()
 
 
