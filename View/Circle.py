@@ -5,6 +5,7 @@ class Circle:
     redundant = 0
     predicted = False
     alpha = 0.5
+    value = 0
 
     def __init__(self, x, y, first_encirclement, circle_colour, in_target_region = False):
         self.x = x

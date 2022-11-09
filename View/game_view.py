@@ -1,6 +1,6 @@
 # import the pygame module, so you can use it
 import pygame
-from multiprocessing import Queue, Process
+from multiprocessing import Queue
 import time
 from View.Circle import Circle
 
@@ -12,6 +12,10 @@ class GameView:
     __last_tick_update = time.time()
     __target_box = None
     __last_frame_update = __last_tick_update
+
+    points = 0
+    pos_pred_value = 100
+    neg_pred_value = -10
 
     def __init__(self, label_queue : Queue, out_pueue : Queue, pred_queue : Queue, labels: dict,
                  box_size: float= 0.85, speed: float = 0.1, mimimum_distance_between: float = 0.33,
@@ -27,7 +31,6 @@ class GameView:
         :param mimimum_distance_between: The minimum distance to insert the next target value, must be between 0 and 1
         :param fps: Frame updates per second
         :param tps: Game updates per second
-
         """
 
         if mimimum_distance_between < 0 or mimimum_distance_between > 1:
@@ -57,31 +60,32 @@ class GameView:
         logo = pygame.image.load("C:\\Users\\johan\\PycharmProjects\\MA\\View\\maffay.png")
         pygame.display.set_icon(logo)
         pygame.display.set_caption("EEG Hero")
-        self.label_font = pygame.font.SysFont(None, 42)
+
+        self.__label_font = pygame.font.SysFont(None, 27)
+        self.__point_font = pygame.font.SysFont(None, 18)
 
         # create a surface on screen that has the size of 240 x 180
         self.__screen = pygame.display.set_mode((1200, 900))
 
         self.left = self.__screen.get_width() * 0.33 * 0.5
 
-        self.center = (self.__screen.get_width() * 0.33 + self.__screen.get_width() *0.67) * 0.5
+        self.center = (self.__screen.get_width() * 0.33 + self.__screen.get_width() * 0.67) * 0.5
 
-        self.right = (self.__screen.get_width() * 0.67 ) +self.__screen.get_width() * 0.33 * 0.5
+        self.right = (self.__screen.get_width() * 0.67 ) + self.__screen.get_width() * 0.33 * 0.5
 
         self.__circle_width = self.__screen.get_width() * 0.33 * 0.1
 
         self.box_size = box_size
-        self.__upper_box =  - self.__screen.get_height()*0.05
+        self.__upper_box = - self.__screen.get_height()*0.05
         self.__update_screen()
 
     def __draw_existing_circles(self):
         i = 0
         circles_to_remove = []
         for circle in self.__existing_circles:
-            #print(circle.colour)
+
             pygame.draw.circle(self.__screen, circle.colour, (self.label_to_position(circle.x),
-                                                                    circle.y * self.__screen.get_height()),
-                               self.__circle_width)
+                               circle.y * self.__screen.get_height()), self.__circle_width)
             if circle.in_target_region and not circle.predicted:
                 self.__encircle(circle)
 
@@ -90,6 +94,18 @@ class GameView:
                     circles_to_remove.append(i)
                 else:
                     circle.redundant += 1
+
+                    if circle.value > 0:
+                        text = f"+{circle.value}"
+                    else:
+                        text = str(circle.value)
+                    img = self.__point_font.render(text, True, circle.colour)
+                    print(f"blitting at point "
+                          f"{(self.label_to_position(circle.x) + self.__circle_width,circle.y * self.__screen.get_height()+ self.__circle_width)}")
+
+                    self.__screen.blit(img, (self.label_to_position(circle.x) + self.__circle_width, circle.y *
+                                             self.__screen.get_height() - self.__circle_width))
+
             i+=1
         for index in reversed(circles_to_remove):
             self.__existing_circles.pop(index)
@@ -102,9 +118,10 @@ class GameView:
 
         self.center = (self.__screen.get_width() * 0.33 + self.__screen.get_width() * 0.67) * 0.5
 
-        self.right = (self.__screen.get_width() * 0.67 )  +self.__screen.get_width() * 0.33 * 0.5
+        self.right = (self.__screen.get_width() * 0.67) + self.__screen.get_width() * 0.33 * 0.5
 
         self.__circle_width = self.__screen.get_width() * 0.33 * 0.1
+
     def __update_screen(self):
         self.__recompute()
 
@@ -112,11 +129,12 @@ class GameView:
         self.__draw_lines()
         self.__draw_target_box()
         self.__draw_existing_circles()
+        self.__print_points_and_labels()
 
         pygame.display.flip()
 
     def label_to_position(self, label):
-        #TODO Solve this using label dict
+        # TODO Solve this using label dict
         if label == 0:
             return self.center
         elif label == 1:
@@ -140,7 +158,7 @@ class GameView:
             last_circle = self.__existing_circles[self.__last_label]
             delta = last_circle.y
 
-            if delta <  self.min_distance:
+            if delta < self.min_distance:
 
                 return
 
@@ -198,7 +216,6 @@ class GameView:
                 self.__last_tick_update = new_time
             if (new_time - self.__last_frame_update) > (1/self.__FPS):
                 self.__update_screen()
-                #print(f"Updated at diff {new_time-self.__last_frame_update} should be {1/self.__FPS}")
                 self.__last_frame_update = new_time
 
     def __check_for_prediction(self):
@@ -218,11 +235,17 @@ class GameView:
 
                 circle.predicted = True
 
+                self.points += self.pos_pred_value
+                circle.value += self.pos_pred_value
+
             else:
                 circle.set_colour((255, 0, 0))
                 circle.x = pred
 
                 circle.predicted = True
+
+                self.points += self.neg_pred_value
+                circle.value += self.neg_pred_value
 
     def __move_circle_positions(self):
 
@@ -234,7 +257,7 @@ class GameView:
                 circle.y = circle_y_pos
 
     def __encircle(self, circle):
-        pygame.draw.circle(self.__screen, (0,255,0),
+        pygame.draw.circle(self.__screen, (0, 255, 0),
                            (self.label_to_position(circle.x), circle.y * self.__screen.get_height()),
                            self.__circle_width + 0.005 * 0.33 * self.__screen.get_width(), width=3)
         if circle.first_encircelment:
@@ -254,16 +277,24 @@ class GameView:
                          (0.67 * self.__screen.get_width(),
                           self.__screen.get_height()))
 
-    def __print_points_and_labels(self, verbose=True):
+    def __print_points_and_labels(self, box_dist_from_bottom=0.05):
 
-        sysfont = pygame.font.get_default_font()
+        img = self.__point_font.render(str(self.points), True, (54, 69, 79))
 
-        label_y_pos = 0.05 *self.__screen.get_height()
+        if self.points >= 1000:
+            self.__screen.blit(img, (self.__screen.get_width() * 0.97, self.box_size * self.__screen.get_height() +
+                                 self.__upper_box +0.005 * self.__screen.get_height()))
+        else:
+            self.__screen.blit(img, (self.__screen.get_width() * 0.98, self.box_size * self.__screen.get_height() +
+                                     self.__upper_box + 0.005 * self.__screen.get_height()))
+
+        label_y_pos = ((1-box_dist_from_bottom) * self.__screen.get_height() + self.__screen.get_height()) * 0.5
+
         for key in self.__label_dict.keys():
 
-            x_pos = self.label_to_position(key)
-            img = self.__
-
+            x_pos = self.label_to_position(self.__label_dict[key])
+            img = self.__label_font.render(key, True, (0, 0, 0))
+            self.__screen.blit(img, (x_pos, label_y_pos))
 
 
 

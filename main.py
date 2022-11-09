@@ -3,8 +3,8 @@ from multiprocessing import Queue, Process
 import random
 import time
 
-def great_function(la_q, ev_q, pred_q):
-    gv = GameView(la_q, ev_q, pred_q, {})
+def great_function(la_q, ev_q, pred_q, la_dict):
+    gv = GameView(la_q, ev_q, pred_q, la_dict)
     gv.main_loop()
 
 
@@ -16,8 +16,12 @@ if __name__ == "__main__":
     t = time.time()
     delta = 0
     c_arr = [0,1,2]
+    la_dict = {"pick":  0,
+               "left":  1,
+               "right": 2
+              }
 
-    p = Process( target=great_function, args=(laq, evq, pred_q))
+    p = Process(target=great_function, args=(laq, evq, pred_q, la_dict))
     p.start()
 
     while(True):
@@ -31,5 +35,5 @@ if __name__ == "__main__":
         delta = time.time() - t
         if delta > 0.5:
             ch = random.choice(c_arr)
-            #print("Put ", ch)
+
             laq.put(ch)
