@@ -61,8 +61,8 @@ class GameView:
         pygame.display.set_icon(logo)
         pygame.display.set_caption("EEG Hero")
 
-        self.__label_font = pygame.font.SysFont(None, 27)
-        self.__point_font = pygame.font.SysFont(None, 18)
+        self.__label_font = pygame.font.SysFont(None, 50)
+        self.__point_font = pygame.font.SysFont(None, 35) # initially 18
 
         # create a surface on screen that has the size of 240 x 180
         self.__screen = pygame.display.set_mode((1200, 900))
@@ -76,7 +76,7 @@ class GameView:
         self.__circle_width = self.__screen.get_width() * 0.33 * 0.1
 
         self.box_size = box_size
-        self.__upper_box = - self.__screen.get_height()*0.05
+        self.__upper_box = - self.__screen.get_height()*0.1
         self.__update_screen()
 
     def __draw_existing_circles(self):
@@ -125,7 +125,7 @@ class GameView:
     def __update_screen(self):
         self.__recompute()
 
-        self.__screen.fill((211, 211, 211))
+        self.__screen.fill((0,0,10)) #(211, 211, 211)
         self.__draw_lines()
         self.__draw_target_box()
         self.__draw_existing_circles()
@@ -266,34 +266,52 @@ class GameView:
 
     def __draw_lines(self):
 
-        pygame.draw.line(self.__screen, (0,0,0), (0.33 * self.__screen.get_width(),0),
+        line_colour = (255,255,255)
+        # upper lines
+        pygame.draw.line(self.__screen,line_colour , (0.33 * self.__screen.get_width(),0),
                          (0.33* self.__screen.get_width(),self.box_size *self.__screen.get_height() + self.__upper_box))
-        pygame.draw.line(self.__screen, (0, 0, 0), (0.67 * self.__screen.get_width(), 0),
+        pygame.draw.line(self.__screen, line_colour, (0.67 * self.__screen.get_width(), 0),
                          (0.67 * self.__screen.get_width(), self.box_size * self.__screen.get_height() + self.__upper_box))
-        pygame.draw.line(self.__screen, (0, 0, 0), (0.33 * self.__screen.get_width(), self.__screen.get_height() + self.__upper_box),
-                         (0.33 * self.__screen.get_width(),
-                           self.__screen.get_height()))
-        pygame.draw.line(self.__screen, (0, 0, 0), (0.67 * self.__screen.get_width(), self.__screen.get_height() + self.__upper_box),
-                         (0.67 * self.__screen.get_width(),
-                          self.__screen.get_height()))
 
-    def __print_points_and_labels(self, box_dist_from_bottom=0.05):
+        # lower lines
+        pygame.draw.line(self.__screen, line_colour, (0.33 * self.__screen.get_width(), self.__screen.get_height() + self.__upper_box),
+                         (0.33 * self.__screen.get_width(),
+                           self.__screen.get_height() - 0.05 * self.__screen.get_height()))
+        pygame.draw.line(self.__screen, line_colour, (0.67 * self.__screen.get_width(), self.__screen.get_height() + self.__upper_box),
+                         (0.67 * self.__screen.get_width(),
+                          self.__screen.get_height() - 0.05* self.__screen.get_height()))
+
+        # lower line across x-axis
+
+        pygame.draw.line(self.__screen, line_colour, (0, self.__screen.get_height()-0.05 * self.__screen.get_height()),
+                         (self.__screen.get_width(),self.__screen.get_height()-0.05 * self.__screen.get_height()) )
+
+
+    def __print_points_and_labels(self, box_dist_from_bottom=0.1, point_offset = 0.05):
 
         img = self.__point_font.render(str(self.points), True, (54, 69, 79))
-
+        """
         if self.points >= 1000:
             self.__screen.blit(img, (self.__screen.get_width() * 0.97, self.box_size * self.__screen.get_height() +
                                  self.__upper_box +0.005 * self.__screen.get_height()))
         else:
             self.__screen.blit(img, (self.__screen.get_width() * 0.98, self.box_size * self.__screen.get_height() +
                                      self.__upper_box + 0.005 * self.__screen.get_height()))
+                                     
+        """
+        self.__screen.blit(img, (self.__screen.get_width() * 0.5,
+                                 (self.__screen.get_height() - 0.05 * self.__screen.get_height() +
+                                  self.__screen.get_height()) * 0.5))
 
-        label_y_pos = ((1-box_dist_from_bottom) * self.__screen.get_height() + self.__screen.get_height()) * 0.5
+        label_y_pos = ((1-box_dist_from_bottom) * self.__screen.get_height() + self.__screen.get_height() -
+                       point_offset * self.__screen.get_height()
+                       ) * 0.5
+
 
         for key in self.__label_dict.keys():
 
             x_pos = self.label_to_position(self.__label_dict[key])
-            img = self.__label_font.render(key, True, (0, 0, 0))
+            img = self.__label_font.render(key, True, (255, 255, 255))
             self.__screen.blit(img, (x_pos, label_y_pos))
 
 
@@ -302,7 +320,7 @@ class GameView:
         self.__target_box = pygame.Rect(0 , self.__screen.get_height()* self.box_size + self.__upper_box,
                                         self.__screen.get_width(), self.__screen.get_height() * (1-self.box_size)
                                         )
-        pygame.draw.rect(self.__screen, (0,0,0), self.__target_box,
+        pygame.draw.rect(self.__screen, (255,255,255), self.__target_box,
                          width=3)
 
     def __check_circle_collision(self):
@@ -336,7 +354,7 @@ if __name__ == "__main__":
     gv = GameView(laq, evq, pred_q, {})
     gv.put_label(0)
     gv.put_label(1)
-    #p = Process(target=gv.main_loop)
+    # p = Process(target=gv.main_loop)
     gv.put_predictions(1)
 
     gv.main_loop()
