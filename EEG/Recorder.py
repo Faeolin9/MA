@@ -40,10 +40,10 @@ class Recorder:
             # we stop if sth is in the run queue
             if not self.run_queue.empty():
                 # run_queue gets events of shape (event_id, timestamp)
-                # event 0 means we stop after this execution
+                # event 1 means we stop after this execution
                 event = self.run_queue.get()
 
-                if event[0] == 0:
+                if event[0] == 1:
                     self.running = False
 
                 delta_t = time.time() - event[1]
@@ -57,7 +57,7 @@ class Recorder:
             self.recorder.refresh()
             # get new data and update the sample we got last
             data = self.recorder.get_data(start_sample= self.last_got)
-            print(data.shape)
+            # print(data.shape)
             self.last_got += len(data[0])
 
             # put out data

@@ -3,6 +3,8 @@ from EEG.filter_data import filter_data
 
 class Preprocessor:
 
+    #TODO ONLINE EPOCHING; OFFLINE EPOCHING
+
     def __init__(self):
         pass
 

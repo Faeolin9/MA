@@ -17,7 +17,7 @@ class GameView:
     pos_pred_value = 100
     neg_pred_value = -10
 
-    def __init__(self, label_queue : Queue, out_pueue : Queue, pred_queue : Queue, labels: dict,
+    def __init__(self, label_queue : Queue, out_pueue : Queue, pred_queue : Queue, comm_queue: Queue, labels: dict,
                  box_size: float= 0.85, speed: float = 0.1, mimimum_distance_between: float = 0.33,
                  fps: int = 60, tps: int = 60):
 
@@ -25,6 +25,7 @@ class GameView:
         :param label_queue: A queue in which the next label to display is handed to the view
         :param out_pueue: A queue to give timestamps at which the prediction actually happend for what label
         :param pred_queue: A queue to feed the view the classifier's predictions
+        :param comm_queue: A queue to transfer communication on speed, still running,...
         :param labels: A dict of form (label_name, label_value), as (key, value)
         :param box_size: At what point of the image the target box is supposed to appear
         :param speed: How fast (window_size per second) the target values are supposed to appear
@@ -47,6 +48,7 @@ class GameView:
         self.__queue = label_queue
         self.__out_queue = out_pueue
         self.__event_queue = pred_queue
+        self.comm_queue = comm_queue
 
         self.__label_dict = labels
 
@@ -100,8 +102,8 @@ class GameView:
                     else:
                         text = str(circle.value)
                     img = self.__point_font.render(text, True, circle.colour)
-                    print(f"blitting at point "
-                          f"{(self.label_to_position(circle.x) + self.__circle_width,circle.y * self.__screen.get_height()+ self.__circle_width)}")
+                    #print(f"blitting at point "
+                    #      f"{(self.label_to_position(circle.x) + self.__circle_width,circle.y * self.__screen.get_height()+ self.__circle_width)}")
 
                     self.__screen.blit(img, (self.label_to_position(circle.x) + self.__circle_width, circle.y *
                                              self.__screen.get_height() - self.__circle_width))
@@ -132,6 +134,23 @@ class GameView:
         self.__print_points_and_labels()
 
         pygame.display.flip()
+
+        while not self.comm_queue.empty():
+            ev = self.comm_queue.get()
+            if ev[0] == 'speed_up':
+                if self.speed < 0.33:
+                    self.speed += ev[1]
+                    print('speed_at: ', self.speed)
+            elif ev[0] == 'speed_down':
+                if self.speed >= 0.1:
+                    self.speed -= ev[1]
+            elif ev[0] == 'min_distance_up':
+                self.min_distance += ev[1]
+            elif ev[0] == 'min_distance_down':
+                self.min_distance -= ev[1]
+
+
+
 
     def label_to_position(self, label):
         # TODO Solve this using label dict
@@ -240,7 +259,7 @@ class GameView:
 
             else:
                 circle.set_colour((255, 0, 0))
-                circle.x = pred
+                # circle.x = pred
 
                 circle.predicted = True
 
@@ -305,14 +324,15 @@ class GameView:
 
         label_y_pos = ((1-box_dist_from_bottom) * self.__screen.get_height() + self.__screen.get_height() -
                        point_offset * self.__screen.get_height()
-                       ) * 0.5
+                       ) * 0.5 + 0.01 * self.__screen.get_height()
 
 
         for key in self.__label_dict.keys():
 
             x_pos = self.label_to_position(self.__label_dict[key])
             img = self.__label_font.render(key, True, (255, 255, 255))
-            self.__screen.blit(img, (x_pos, label_y_pos))
+
+            self.__screen.blit(img, (x_pos - (img.get_width()/2), label_y_pos - img.get_height()/2))
 
 
 
@@ -326,11 +346,19 @@ class GameView:
     def __check_circle_collision(self):
 
         for circle in self.__existing_circles:
+            leaving_target_region = circle.in_target_region
 
             circle_x = self.label_to_position(circle.x)
             circle_y = circle.y * self.__screen.get_height()
 
             circle.in_target_region = self.__target_box.collidepoint(circle_x, circle_y)
+
+            if not circle.in_target_region and leaving_target_region:
+                circle.predicted = True
+                circle.colour = (255,0,0)
+                self.points += self.neg_pred_value
+                circle.value += self.neg_pred_value
+
 
     def put_label(self, label):
         self.__queue.put(label)
