@@ -8,7 +8,7 @@ import time
 
 class Display:
     def __init__(self, label_queue: Queue,event_queue: Queue, end_queue:Queue,
-                 event_dict: dict,period: float = 4, pause: float = 2):
+                 event_dict: dict,period: float = 1, pause: float = 2, imagery_duration:float= 1.5):
         self.label_queue = label_queue
         self.parent = tk.Tk()
         self.parent.attributes("-fullscreen", True)
@@ -27,6 +27,11 @@ class Display:
         self.event_queue = event_queue
         self.event_dict = event_dict
 
+        self.imagery_duration = imagery_duration
+
+        self.current_event = None
+
+
     def refresh_label(self):
         """ refresh the content of the label every four seconds """
         # get random term
@@ -39,14 +44,46 @@ class Display:
             if term is not None:
                 # display the new term
                 self.label.configure(text=term)
-                delta_t = time.time()
+
+                self.current_event = self.event_dict[f"start_{term}"]
+
+                #self.event_queue.put((ev, delta_t))
+
                 # request tkinter to call self.refresh after 4s (the delay is given in ms)
-                self.label.after(1000*self.period, self.refresh_label_pause)
-                ev = self.event_dict[f"start_{term}"]
-                self.event_queue.put((ev, delta_t))
+
+                self.label.after(1000*self.period, self.during_imagery)
 
             else:
                 self.label.configure(text="Thank you for your participation")
+        else:
+            self.label.configure(text = '+')
+            self.label.after(1000*self.period, self.refresh_queue_empty)
+
+    def refresh_queue_empty(self):
+        self.label.after(1000*self.period, self.refresh_label)
+
+
+    def during_imagery(self):
+        print("presenting")
+        self.label.configure(text="+")
+        self.label.after(1000,  self.first_blink)
+
+
+
+    def first_blink(self):
+        self.label.configure(text=" ")
+        self.label.after(500, self.imagery_cross)
+
+    def imagery_cross(self):
+        delta_t = time.time()
+        self.event_queue.put((self.current_event, delta_t))
+        self.label.configure(text = '+')
+        self.label.after(int(1000*self.imagery_duration), self.second_blink)
+
+    def second_blink(self):
+        self.label.configure(text=" ")
+        self.label.after(500, self.refresh_label_pause)
+
 
     def refresh_label_pause(self):
         """ refresh the content of the label every four seconds """
@@ -58,9 +95,14 @@ class Display:
         # request tkinter to call self.refresh after 4s (the delay is given in ms)
         self.label.after(1000*self.pause, self.refresh_label)
 
-    def toggle(self):
-       self.geom = not self.geom
-       self.parent.attributes("-fullscreen",self.geom)
+    def toggle(self, test):
+        """
+
+        :param test: does nothing but is needed due to TKinter UI
+        :return:
+        """
+        self.geom = not self.geom
+        self.parent.attributes("-fullscreen",self.geom)
 
 
 

@@ -15,3 +15,7 @@ class ClassifierInterface:
 
     def predict(self, data):
         return self.classifier.classify(data)
+
+    def fit_one(self, x_train, y_train):
+        self.classifier.set_data(x_train, y_train)
+        self.classifier.fit_one()

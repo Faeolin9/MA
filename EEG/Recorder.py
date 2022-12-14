@@ -27,7 +27,7 @@ class Recorder:
         self.description = description
         self.subject_info = subject_info
 
-    def main_loop(self):
+    def main_loop(self, sample_time=1.5):
 
         # connect to recorder
         self.recorder.connect()
@@ -47,14 +47,36 @@ class Recorder:
                     self.running = False
 
                 delta_t = time.time() - event[1]
+                print(event)
                 sfreq = self.recorder.get_sfreq()
 
-                sample_dist = np.ceil(sfreq * delta_t)
+                sample_dist = np.floor(sfreq * delta_t)
 
+                self.recorder.refresh()
                 self.recorder.set_event(event[0], sample_dist)
+                sample_at = self.recorder.get_number_of_samples() - sample_dist
+
+                if event[0] == 2 or event[0] == 4 or event[0] == 6:
+                    print("Received Event, collecting data")
+
+                    while delta_t < sample_time + 0.05:
+                        delta_t = time.time() - event[1]
+
+                        #print(f"Waiting, time is too short, at {delta_t}, need {sample_time}")
+
+                    # get new data and update the sample we got last
+                    self.recorder.refresh()
+                    data = self.recorder.get_data(start_sample=sample_at)
+                    range = self.recorder.montage.get_range_of_type('misc')
+                    data = data[range, :]
+                    print(f"Sent Data of shape {data.shape} ")
+                    # print(f"Sample_dist: {sample_dist}, sample_at {sample_at}")
+                    # put out data
+                    self.out_queue.put(data)
 
             # refresh recorder
             self.recorder.refresh()
+            """
             # get new data and update the sample we got last
             data = self.recorder.get_data(start_sample= self.last_got)
             # print(data.shape)
@@ -62,6 +84,8 @@ class Recorder:
 
             # put out data
             self.out_queue.put(data)
+            
+            """
 
             # don't overload recorder with too many refreshes
             time.sleep(.1)

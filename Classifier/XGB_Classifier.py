@@ -93,7 +93,7 @@ class xgb_classifier:
 
     def set_data(self, data, labels):
         self.data = self.flatten(data)
-        self.data_dmatrix = xgb.DMatrix(data=self.data, label=labels)
+        # self.data_dmatrix = xgb.DMatrix(data=self.data, label=labels)
 
         self.labels = labels
 
@@ -109,6 +109,9 @@ class xgb_classifier:
         acc= self.xg_class.score(self.flatten(x_test), y_test)
         #del self.xg_class
         return acc
+
+    def fit_one(self):
+        self.xg_class.fit(self.flatten(self.data), self.labels, verbose=True, eval_metric='merror',)
 
 
     def cv(self, data, labels, cv=10):

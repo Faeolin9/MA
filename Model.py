@@ -3,17 +3,18 @@ import numpy as np
 
 class Model:
 
-    def __init__(self, classes:dict,  n_classes: int, n_samples_per_class:int = 50 ):
+    def __init__(self, classes:dict,  n_classes: int, n_samples_per_class:int = 100, n_samples_per_level:int = 5):
         self.classes = classes
+        self.n_samples_level = n_samples_per_level
         self.sample_list = []
-        for i in classes.values():
-            ext = [i] * n_samples_per_class
+        for i in classes.keys():
+            ext = [i] * n_samples_per_level
             self.sample_list.extend(ext)
 
-    def draw_random_sample(self):
-        val = np.random.choice(self.sample_list)
-        self.sample_list.remove(val)
-        return val
+    def create_level(self):
+        return self.sample_list
+
+
 
 
 if __name__ == "__main__":
@@ -23,9 +24,4 @@ if __name__ == "__main__":
                "right": 2
               }, 3)
     print(len(m.sample_list))
-
-    for j in range(5):
-        sa = m.draw_random_sample()
-        print(sa)
-
 
